@@ -29,9 +29,8 @@ class LanguagePack::Helpers::BundlerWrapper
   end
 
   def install
-    #fetch_bundler
-    #$LOAD_PATH << @path
-    `gem install bundler --no-rdoc --no-ri`
+    fetch_bundler
+    $LOAD_PATH << @path
     require "bundler"
     self
   end

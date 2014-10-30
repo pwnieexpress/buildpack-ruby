@@ -686,7 +686,7 @@ params = CGI.parse(uri.query || "")
   # @return [Array] the node.js binary path if we need it or an empty Array
   def add_node_js_binary
     #bundler.has_gem?('execjs') && !node_js_installed? ? [NODE_JS_BINARY_PATH] : []
-    false
+    []
   end
 
   def node_bp_bin_path

@@ -689,7 +689,7 @@ params = CGI.parse(uri.query || "")
   end
 
   def node_bp_bin_path
-    "#{Dir.pwd}/#{NODE_BP_PATH}"
+    "/usr/bin"
   end
 
   # checks if node.js is installed via the official heroku-buildpack-nodejs using multibuildpack

@@ -55,6 +55,11 @@ class LanguagePack::Ruby < LanguagePack::Base
       vars = {
         "LANG" => env("LANG") || "en_US.UTF-8"
       }
+
+      ruby_version.jruby? ? vars.merge({
+        "JAVA_OPTS" => default_java_opts,
+        "JRUBY_OPTS" => default_jruby_opts
+      }) : vars
     end
   end
 
@@ -231,6 +236,14 @@ EOF
   # sets up the environment variables for the build process
   def setup_language_pack_environment
     instrument 'ruby.setup_language_pack_environment' do
+      if ruby_version.jruby?
+        ENV["PATH"] += ":bin"
+        ENV["JAVA_TOOL_OPTIONS"] = run(<<-SHELL).chomp
+#{set_jvm_max_heap}
+echo #{default_java_tool_options}
+SHELL
+        ENV["JRUBY_OPTS"] = env('JRUBY_BUILD_OPTS') || env('JRUBY_OPTS')
+      end
       setup_ruby_install_env
       ENV["PATH"] += ":#{node_bp_bin_path}" if node_js_installed?
 
@@ -270,6 +283,8 @@ EOF
       set_env_default  "LANG",     "en_US.UTF-8"
       set_env_override "GEM_PATH", "$HOME/#{slug_vendor_base}:$GEM_PATH"
       set_env_override "PATH",     binstubs_relative_paths.map {|path| "$HOME/#{path}" }.join(":") + ":$PATH"
+
+      add_to_profiled set_default_web_concurrency if env("SENSIBLE_DEFAULTS")
 
       if ruby_version.jruby?
         add_to_profiled set_jvm_max_heap
@@ -408,7 +423,6 @@ ERROR
   # default set of binaries to install
   # @return [Array] resulting list
   def binaries
-    add_node_js_binary
   end
 
   # vendors binaries into the slug
@@ -426,7 +440,11 @@ ERROR
     bin_dir = "bin"
     FileUtils.mkdir_p bin_dir
     Dir.chdir(bin_dir) do |dir|
-      @fetchers[:buildpack].fetch_untar("#{name}.tgz")
+      if name.match(/^node\-/)
+        @node_installer.install
+      else
+        @fetchers[:buildpack].fetch_untar("#{name}.tgz")
+      end
     end
   end
 
@@ -709,8 +727,7 @@ params = CGI.parse(uri.query || "")
   # @note execjs will blow up if no JS RUNTIME is detected and is loaded.
   # @return [Array] the node.js binary path if we need it or an empty Array
   def add_node_js_binary
-    #bundler.has_gem?('execjs') && !node_js_installed? ? [@node_installer.binary_path] : []
-    []
+    bundler.has_gem?('execjs') && !node_js_installed? ? [@node_installer.binary_path] : []
   end
 
   def node_bp_bin_path
@@ -768,9 +785,6 @@ params = CGI.parse(uri.query || "")
       stack_cache             = "stack"
 
       old_rubygems_version = @metadata.read(ruby_version_cache).chomp if @metadata.exists?(ruby_version_cache)
-      old_stack = @metadata.read(stack_cache).chomp if @metadata.exists?(stack_cache)
-      old_stack ||= DEFAULT_LEGACY_STACK
-
       @bundler_cache.load
 
       # fix bug from v37 deploy

@@ -4,6 +4,7 @@ require "yaml"
 require "digest/sha1"
 require "language_pack/shell_helpers"
 require "language_pack/cache"
+require "language_pack/helpers/bundler_cache"
 require "language_pack/metadata"
 require "language_pack/fetcher"
 require "language_pack/instrument"
@@ -14,7 +15,8 @@ Encoding.default_external = Encoding::UTF_8 if defined?(Encoding)
 class LanguagePack::Base
   include LanguagePack::ShellHelpers
 
-  VENDOR_URL = ENV['BUILDPACK_VENDOR_URL'] || "http://stelfox.net/buildpack-dependencies/"
+  VENDOR_URL           = ENV['BUILDPACK_VENDOR_URL'] || "http://stelfox.net/buildpack-dependencies/"
+  ROOT_DIR             = File.expand_path("../../..", __FILE__)
 
   attr_reader :build_path, :cache
 
@@ -23,13 +25,13 @@ class LanguagePack::Base
   # @param [String] the path of the cache dir this is nil during detect and release
   def initialize(build_path, cache_path=nil)
      self.class.instrument "base.initialize" do
-      @build_path   = build_path
-      @cache        = LanguagePack::Cache.new(cache_path) if cache_path
-      @metadata     = LanguagePack::Metadata.new(@cache)
-      @id           = Digest::SHA1.hexdigest("#{Time.now.to_f}-#{rand(1000000)}")[0..10]
-      @warnings     = []
-      @deprecations = []
-      @fetchers     = {:buildpack => LanguagePack::Fetcher.new(VENDOR_URL) }
+      @build_path    = build_path
+      @cache         = LanguagePack::Cache.new(cache_path) if cache_path
+      @metadata      = LanguagePack::Metadata.new(@cache)
+      @id            = Digest::SHA1.hexdigest("#{Time.now.to_f}-#{rand(1000000)}")[0..10]
+      @warnings      = []
+      @deprecations  = []
+      @fetchers      = {:buildpack => LanguagePack::Fetcher.new(VENDOR_URL) }
 
       Dir.chdir build_path
     end
@@ -76,9 +78,11 @@ class LanguagePack::Base
   def compile
     write_release_yaml
     instrument 'base.compile' do
-      if @warnings.any?
-        topic "WARNINGS:"
-        puts @warnings.join("\n")
+      Kernel.puts ""
+      @warnings.each do |warning|
+        Kernel.puts "###### WARNING:"
+        puts warning
+        Kernel.puts ""
       end
       if @deprecations.any?
         topic "DEPRECATIONS:"
@@ -148,6 +152,21 @@ private ##################################
     add_to_profiled %{export #{key}="#{val.gsub('"','\"')}"}
   end
 
+  def add_to_export(string)
+    export = File.join(ROOT_DIR, "export")
+    File.open(export, "a") do |file|
+      file.puts string
+    end
+  end
+
+  def set_export_default(key, val)
+    add_to_export "export #{key}=${#{key}:-#{val}}"
+  end
+
+  def set_export_override(key, val)
+    add_to_export %{export #{key}="#{val.gsub('"','\"')}"}
+  end
+
   def log_internal(*args)
     message = build_log_message(args)
     %x{ logger -p user.notice -t "slugc[$$]" "buildpack-ruby #{message}" }
@@ -164,4 +183,3 @@ private ##################################
     end.join(" ")
   end
 end
-

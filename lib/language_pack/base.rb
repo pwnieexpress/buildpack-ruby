@@ -16,6 +16,7 @@ class LanguagePack::Base
   include LanguagePack::ShellHelpers
 
   VENDOR_URL           = ENV['BUILDPACK_VENDOR_URL'] || "http://stelfox.net/buildpack-dependencies/"
+  DEFAULT_LEGACY_STACK = "cedar"
   ROOT_DIR             = File.expand_path("../../..", __FILE__)
 
   attr_reader :build_path, :cache
@@ -28,6 +29,7 @@ class LanguagePack::Base
       @build_path    = build_path
       @cache         = LanguagePack::Cache.new(cache_path) if cache_path
       @metadata      = LanguagePack::Metadata.new(@cache)
+      @bundler_cache = LanguagePack::BundlerCache.new(@cache)
       @id            = Digest::SHA1.hexdigest("#{Time.now.to_f}-#{rand(1000000)}")[0..10]
       @warnings      = []
       @deprecations  = []

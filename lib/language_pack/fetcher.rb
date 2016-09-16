@@ -6,7 +6,6 @@ module LanguagePack
     class FetchError < StandardError; end
 
     include ShellHelpers
-    CDN_YAML_FILE = File.expand_path("../../../config/cdn.yml", __FILE__)
 
     def initialize(host_url, stack = nil)
       @config   = load_config
@@ -43,7 +42,7 @@ module LanguagePack
     end
 
     def load_config
-      YAML.load_file(CDN_YAML_FILE) || {}
+      {}
     end
 
     def fetch_cdn(url)

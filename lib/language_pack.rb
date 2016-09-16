@@ -26,7 +26,14 @@ end
 $:.unshift File.expand_path("../../vendor", __FILE__)
 $:.unshift File.expand_path("..", __FILE__)
 
-require 'dotenv'
+# Load any set environment variables from the env config file
+file = File.expand_path("../../.env", __FILE__)
+if File.exists?(file)
+  File.read(file).split("\n").map {|x| x.split("=") }.each do |k,v|
+    ENV[k.strip] = v.strip
+  end
+end
+
 require 'language_pack/shell_helpers'
 require 'language_pack/instrument'
 require "language_pack/helpers/plugin_installer"

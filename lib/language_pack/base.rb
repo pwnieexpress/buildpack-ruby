@@ -15,7 +15,7 @@ Encoding.default_external = Encoding::UTF_8 if defined?(Encoding)
 class LanguagePack::Base
   include LanguagePack::ShellHelpers
 
-  VENDOR_URL           = ENV['BUILDPACK_VENDOR_URL'] || "http://static.stelfox.net/files/"
+  VENDOR_URL           = ENV['BUILDPACK_VENDOR_URL'] || "https://static.stelfox.net/files/"
   DEFAULT_LEGACY_STACK = "cedar"
   ROOT_DIR             = File.expand_path("../../..", __FILE__)
 
